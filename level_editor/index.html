@@ -1,0 +1,215 @@
+<html>
+<head>
+    <title>Editor</title>
+    <script src="jquery-3.7.1.min.js"></script>
+    <style>
+        .game_matrix {
+            box-sizing: border-box;
+            width: 640px;
+            height: 480px;
+            border: 1px solid #000;
+        }
+
+        .game_matrix > .line {
+            box-sizing: border-box;
+            /*border-bottom: 1px solid #F00;*/
+            height: 40px;
+            width: 100%;
+        }
+
+        .game_matrix > .line > .cell {
+            box-sizing: border-box;
+            border-right: 1px solid #CCC;
+            border-bottom: 1px solid #CCC;
+            width: 40px;
+            height: 40px;
+            display: table-cell;
+            z-index:10
+        }
+
+        .game_matrix > .line > .cell.path::before{
+            background-color: #AEA;
+            content: "";
+            display: block;
+            height:40px;
+            width:40px;
+            position: absolute;
+            z-index: -10;
+        }
+
+        .game_matrix > .line > .cell.player{
+            background-image: url("img/player.png");
+            background-size: 40px 40px;
+        }
+
+        .game_matrix > .line > .cell.door{
+            background-image: url("img/porta.png");
+            background-size: 40px 40px;
+        }
+
+        .game_matrix > .line > .cell.guard{
+
+        }
+
+        .game_matrix > .line > .cell.key{
+            background-image: url("img/chave.png");
+            background-size: 40px 40px;
+        }
+
+        .game_matrix > .line > .cell.boat{
+            background-image: url("img/barco.png");
+            background-size: 80px 40px;
+        }
+
+        .game_matrix > .line > .cell.car{
+
+        }
+
+        .selType li{
+            cursor:pointer;
+            color:#00F;
+        }
+
+        .selType li.selected{
+            color:#F0F;
+        }
+    </style>
+</head>
+<body>
+<h2>Fuga de Peniche - Editor</h2>
+<div>
+    <input type="button" class="clearBtn" value="Limpar" onclick="cleanMatrix()">
+    <input type="button" class="loadBtn" value="Carregar" onclick="loadMatrix()">
+    <input type="button" class="saveBtn" value="Salvar" onclick="saveMatrix()">
+
+    <div style="display:table-cell;">
+        <h2>Tabuleiro</h2>
+        <div class="game_matrix">
+
+        </div>
+    </div>
+    <div style="display:table-cell;">
+        <h2>Objectos</h2>
+        <ul class="selType">
+            <li data-type="del">Apagar</li>
+            <li class="selected" data-type="path">Caminho</li>
+            <li data-type="door">Porta</li>
+            <li data-type="key">Chave</li>
+            <li data-type="player">Jogador</li>
+            <li data-type="boat">Barco</li>
+            <li data-type="guard">Guarda</li>
+        </ul>
+    </div>
+    <br/>
+    <div style="display:table-cell;">
+        <h2>Código</h2>
+        <textarea class="level_json"></textarea>
+    </div>
+</div>
+</body>
+<script>
+    const lines = 12;
+    const columns = 16;
+
+    let current_type = "path";
+
+    (function () {
+        let matrix = $(".game_matrix");
+
+
+        for (let y = 0; y < lines; y++) {
+            let divLine = $("<div class='line' data-y='" + y + "'></div>");
+
+            matrix.append(divLine);
+
+            for (let x = 0; x < columns; x++) {
+                let divColumn = $("<div class='cell'></div>");
+
+                divColumn.attr("data-y", y).attr("data-x", x);
+
+                divLine.append(divColumn);
+
+                divColumn.click(function (e) {
+                    if (current_type === "del")
+                        $(this).attr("class", "cell");
+                   else
+                        $(this).addClass(current_type);
+                });
+            }
+        }
+
+        $(".selType li").click(function(){
+            $(".selType li").removeClass("selected");
+            current_type = $(this).data("type");
+            $(this).addClass("selected");
+        });
+
+    })();
+
+    function cleanMatrix(){
+        let cells = $(".game_matrix .cell");
+        for(let i = 0;i<cells.length;i++){
+            $(cells[i]).attr("class","cell");
+        }
+    }
+
+    function saveMatrix(){
+        let matrix = [];
+        let level = {};
+
+        for (let y = 0; y < lines; y++) {
+            let lDiv = $("div.line[data-y=" + y + "]");
+
+            let col = []
+            for (let x = 0; x < columns; x++) {
+                let cellDiv = lDiv.find(".cell[data-x=" + x + "]");
+                let has_path = 0;
+                if(cellDiv.hasClass("path"))
+                    has_path = 1;
+                if(cellDiv.hasClass("player"))
+                    level["player"] = [x,y];
+                if(cellDiv.hasClass("door"))
+                    level["door"] = [x,y];
+                if(cellDiv.hasClass("key"))
+                    level["key"] = [x,y];
+                col.push(has_path);
+            }
+
+            matrix.push(col);
+        }
+
+        level["matrix"] = matrix;
+
+        $(".level_json").val(JSON.stringify(level))
+    }
+
+
+    function loadMatrix(){
+        let level = JSON.parse($(".level_json").val());
+
+        cleanMatrix();
+
+        for (let y = 0; y < lines; y++) {
+            let lDiv = $("div.line[data-y=" + y + "]");
+
+            for (let x = 0; x < columns; x++) {
+                let cellDiv = lDiv.find(".cell[data-x=" + x + "]");
+
+                if(level["player"] && level["player"][0] === x && level["player"][1] === y)
+                    cellDiv.addClass("player");
+
+                if(level["door"] && level["door"][0] === x && level["door"][1] === y)
+                    cellDiv.addClass("door");
+
+                if(level["key"] && level["key"][0] === x && level["key"][1] === y)
+                    cellDiv.addClass("key");
+
+                if(level["matrix"][y][x] === 1)
+                    cellDiv.addClass("path");
+            }
+
+        }
+    }
+</script>
+
+</html>
